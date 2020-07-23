@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <apikit:config name="taxonomyreferencedata-config" api="taxonomyreferencedata.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+	<ee:object-store-caching-strategy name="Caching_Strategy" doc:name="Caching Strategy" doc:id="b956145a-34da-4acf-a3c5-4750a206c974" keyGenerationExpression="#[vars.RefCode]" objectStore="Obj_store" />
+	<import doc:name="Import" doc:id="6594dc51-b4f2-4142-a5a4-68cfd274e75b" file="common-error-handling.xml" doc:description="Common-Error-Handling Flow"/>
+	<import doc:name="Import" doc:id="6d7e3269-9d9e-467c-acb8-666c287dfeaf" file="common-global-config.xml" doc:description="Common-Global-Config File"/>
+	<import doc:name="Import" doc:id="d21e4c2e-db35-4a79-a6b9-c2dea5850e66" file="common-logging.xml" doc:description="Common-Logging Flow"/>
+	<import doc:name="Import" doc:id="45be0c19-792e-4b67-b28d-949ed06377d4" file="common-audit.xml" doc:description="Common-Audit Flow"/>
+	<configuration-properties doc:name="Configuration properties" doc:id="b4d0bc8b-ea14-4e36-8c1b-14bdd5228d75" file="properties/loggingProperties.yaml" />
+	<configuration doc:name="Configuration" doc:id="a2495924-e7dc-4e13-b129-93263afd16a3" defaultErrorHandler-ref="common-global-error_handler" />
+	<http:request-config name="HTTP_Request_configuration1" doc:name="HTTP Request configuration" doc:id="7cfbb174-6351-4aac-adb7-b272d083e3bf" basePath="/api/v1" >
+		<http:request-connection host="internal-MMIS-PA-SIT-INT-LB01-511182453.us-east-2.elb.amazonaws.com" port="80" />
+	</http:request-config>
+	<os:config name="ObjectStore_Config_Local" doc:name="ObjectStore Config" doc:id="5edf2f38-465d-479e-835e-474df75c16b3" >
+		<os:connection >
+			<reconnection failsDeployment="true" />
+		</os:connection>
+	</os:config>
+	<os:object-store name="Obj_store" doc:name="Object store" doc:id="60aa2d2b-0f95-4a3d-af1d-c57d685f34ae" maxEntries="5" entryTtl="15" entryTtlUnit="MINUTES" expirationInterval="20"/>
+	<flow name="taxonomyreferencedata-main">
+        
+        <http:listener doc:name="Listener" doc:id="23432595-68b1-4592-afc6-03c9c473d3c2" config-ref="Global_HTTP_Listener_config" path="api/v1/taxonomyReferenceData/*">
+        <http:response statusCode="#[vars.httpStatus default 200]">
+				<http:headers><![CDATA[#[output application/java
+---
+{
+	"CorrelationID" : correlationId
+}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[output application/java
+---
+{
+	"CorrelationID" : correlationId
+}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+		<apikit:router config-ref="taxonomyreferencedata-config" />
+    </flow>
+    <flow name="get:\(RefCode):taxonomyreferencedata-config">
+		<ee:transform doc:name="initializeVariables" doc:id="9102d73c-c526-4aa5-8b56-4d76ff0374af" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="applicationName" ><![CDATA[p("applicationName")]]></ee:set-variable>
+				<ee:set-variable variableName="transactionLevel" ><![CDATA[p("transaction.level")]]></ee:set-variable>
+				<ee:set-variable variableName="flowName" ><![CDATA[p("flowName")]]></ee:set-variable>
+				<ee:set-variable variableName="instanceId" ><![CDATA[uuid()]]></ee:set-variable>
+				<ee:set-variable variableName="businessProcessDomain" ><![CDATA[p("businessProcessDomain")]]></ee:set-variable>
+				<ee:set-variable variableName="sourceApplication" ><![CDATA[attributes.headers.'source-application' default p("sourceApplication")]]></ee:set-variable>
+				<ee:set-variable variableName="destinationApplication" ><![CDATA[p("destinationApplication")]]></ee:set-variable>
+				<ee:set-variable variableName="enviroment" ><![CDATA[p("env")]]></ee:set-variable>
+				<ee:set-variable variableName="StartTime" ><![CDATA[
+fun format(d: DateTime) = d as String {format: "yyyy-MM-dd'T'HH:mm:ss.SSS"}
+---
+format(now())
+]]></ee:set-variable>
+				<ee:set-variable variableName="transactionId" ><![CDATA[attributes.uriParams.RefCode]]></ee:set-variable>
+				<ee:set-variable variableName="businessData" ><![CDATA[p("businessData")
+]]></ee:set-variable>
+				<ee:set-variable variableName="inputPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	uriParameters:attributes.uriParams.RefCode default '',
+	queryParameters:attributes.queryParams default '',
+    payload: payload default ''
+	
+}]]></ee:set-variable>
+				<ee:set-variable variableName="applicationErrorCode" ><![CDATA['DH-001']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="logEntryInfo" doc:id="1ed379f9-f6ec-4c42-be27-ce49aa82f9fd" name="logEntryInfo"/>
+		<flow-ref doc:name="auditEntryInfo" doc:id="20abad24-cc09-4220-ac6b-5b5dc07acd25" name="AuditEntryInfo"/>
+		<tracking:custom-event doc:name="entryBusinessEvent" doc:id="a9201b23-e077-45fe-aa43-4e325aefd68f" event-name="entryAudit">
+			<tracking:meta-data key="referenceCode" value="#[attributes.uriParams.RefCode]" />
+		</tracking:custom-event>
+		<choice doc:name="Choice" doc:id="fd109b2e-4a88-40bc-9b6c-e4c4cb4d99af" >
+			<when expression="#[attributes.uriParams.RefCode == '123']">
+				<raise-error doc:name="raiseError" doc:id="a7a4f7c4-b743-4f65-8e41-d317d487b8f0" type="API:RESOURCE_NOT_FOUND" description='Resource Not Found Exception - "The specified resource does not exist."'/>
+			</when>
+		</choice>
+		<set-variable value="#[attributes.uriParams.RefCode]" doc:name="setRefCode" doc:id="673e2726-355b-47b5-99e2-49834af9eebc" variableName="RefCode"/>
+		<set-variable value="Cache Hit" doc:name="setCacheStatus" doc:id="4b8136ca-de37-4570-bf47-0eee326b6bb0" variableName="CacheStatus"/>
+		<until-successful maxRetries="${untilSuccessful.maxRetries}" doc:name="Until Successful" doc:id="4897abb5-58d7-492b-bf11-8ab3aaeaf138" millisBetweenRetries="${untilSuccessful.retryTime}">
+			<ee:cache doc:name="Cache_Scope" doc:id="6111516e-c0c9-44fb-b4ff-f8fdd73d675f" cachingStrategy-ref="Caching_Strategy">
+					<http:request method="GET" doc:name="invoke-Taxonomy-RefData-System-Api" doc:id="f6f9f5a6-c2af-4ec3-a932-baa68b702ea7" path="/taxonomyRef/{RefCode}" config-ref="HTTP_Request_configuration1" sendCorrelationId="ALWAYS">
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"RefCode" : attributes.uriParams.RefCode
+}]]]></http:uri-params>
+		</http:request>
+					
+					<set-variable value="Cache Miss" doc:name="setCacheStatus" doc:id="8142bf7f-4215-4fc0-9057-6f7aef2dfd0c" variableName="CacheStatus" />
+		</ee:cache>
+		</until-successful>
+		<tracking:custom-event doc:name="cacheBusinessEvent" doc:id="af869414-d77d-4a0c-9064-5b4a10a76299" event-name="response">
+			<tracking:meta-data key="cacheStatus" value="#[vars.CacheStatus]" />
+		</tracking:custom-event>
+		<ee:transform doc:name="refCodeOutput" doc:id="08c379c6-4130-4235-bc86-9d4a1d5d1562">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+"Code": payload.Reference_Code[0],
+"Description": payload.Reference_Description[0],
+"CacheStatus": vars.CacheStatus,
+"CorrelationId": correlationId
+
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="auditExitInfo" doc:id="1fde796e-2e08-4174-816f-ec83bed7321b" name="AuditExitInfo" />
+		<flow-ref doc:name="logExitInfo" doc:id="078b86fc-a0ce-46b1-a161-dd880eab9c0b" name="logExitInfo"/>
+    </flow>
+	
+</mule>

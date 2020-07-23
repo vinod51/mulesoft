@@ -1,0 +1,17 @@
+applicationName: "taxonomy-reference-data-process-api"
+flowName: "taxonomy-reference-data-flow"
+businessProcessDomain: "Common"
+sourceApplication: "Portal"
+businessData: "TaxonomyReferenceData"
+destinationApplication: "ODS"
+#enviroment: "Dev"
+untilSuccessful:
+ maxRetries: "3"
+ retryTime: "1000"
+transaction:
+  level:
+    entry: "ENTRY"
+    exit: "EXIT"
+    request: "REQUEST"
+    response: "RESPONSE"
+    exception: "EXCEPTION"
