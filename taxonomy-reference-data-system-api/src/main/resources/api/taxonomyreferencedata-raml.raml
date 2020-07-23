@@ -1,0 +1,27 @@
+#%RAML 1.0
+title: Taxonomy Reference Data Proces API
+
+/{RefCode}:
+  get:
+    description: this method is to retreive the provider information from the Taxonomy_Ref Table          
+    responses:
+      200:
+        body:
+          application/json:
+            example: {"message": "Message Successfully received"}
+      400:
+        body:
+          application/json:
+            example: {
+                       "message": "The query parameter is mandatory and its name has to match 'RefCode' and should be passed a valid String"
+                      }
+      404:
+        body:
+          application/json:
+            example: {
+                      "message": "Reference Code not found, Please provide the valid RefCode"
+                      }
+      500:
+        body:
+          application/json:
+            example: "Internal Error"
